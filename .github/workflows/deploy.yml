@@ -21,8 +21,9 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deploy CloudFormation Stack
-        run: |
-          aws cloudformation deploy \
-            --template-file cloudformation.yml \
-            --stack-name cloud-monitoring-stack \
-            --capabilities CAPABILITY_NAMED_IAM
+  run: |
+    aws cloudformation deploy \
+      --template-file cloudformation.yml \
+      --stack-name cloud-monitoring-stack \
+      --parameter-overrides EmailAddress=${{ secrets.EMAIL_ADDRESS }} \
+      --capabilities CAPABILITY_NAMED_IAM
