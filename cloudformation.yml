@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Cloud Monitoring and Alerting Solution
+
+Parameters:
+  EmailAddress:
+    Type: String
+    Description: Email address for SNS notifications
+
+Resources:
+
+  MonitoringSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for Monitoring EC2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  MonitoringInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+
+      ImageId: ami-0f58b397bc5c1f2e8
+
+      SecurityGroupIds:
+        - !Ref MonitoringSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: Monitoring-Server
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: MonitoringAlerts
+
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref EmailAddress
+      Protocol: email
+      TopicArn: !Ref SNSTopic
+
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CPU Utilization exceeds 70%
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref MonitoringInstance
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref SNSTopic
+
+  MonitoringDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: MonitoringDashboard
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/EC2", "CPUUtilization", "InstanceId", "${MonitoringInstance}" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "EC2 CPU Utilization"
+              }
+            }
+          ]
+        }
+
+Outputs:
+
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref MonitoringInstance
+
+  TopicArn:
+    Description: SNS Topic ARN
+    Value: !Ref SNSTopic
+
+  DashboardName:
+    Description: CloudWatch Dashboard
+    Value: MonitoringDashboard
