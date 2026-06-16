@@ -1,3 +1,8 @@
+- name: Check Email Secret
+  run: |
+    echo "Email secret length: ${#EMAIL}"
+  env:
+    EMAIL: ${{ secrets.EMAIL_ADDRESS }}
 name: Deploy CloudFormation Stack
 
 on:
